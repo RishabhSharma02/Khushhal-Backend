@@ -4,17 +4,41 @@ from datetime import date, datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
+from app.core.logging import get_logger
 from app.db.base import RowStatus
 from app.models.business import Business
 from app.models.monthly_snapshot import MonthlySnapshot
 from app.models.user import User
 from app.repositories import businesses as biz_repo
 from app.schemas.business import BusinessCreate, BusinessUpdate
+from app.services import insights_service
+
+log = get_logger(__name__)
 
 
 def _first_of_month(d: date | None = None) -> date:
     d = d or datetime.now(timezone.utc).date()
     return d.replace(day=1)
+
+
+async def _stamp_first_score(db: AsyncSession, biz: Business, current: User) -> None:
+    """Score a brand-new business immediately.
+
+    The setup wizard's monthly snapshot is the only input the feature builder
+    needs — zero ledger entries is a supported case — so there is nothing to
+    wait for, and without this Home would sit on its loading skeleton until
+    the monthly cron next runs. Scoring failures are swallowed: the score is
+    recoverable (next stamp, or `POST /insights/refresh`), the business is
+    not.
+    """
+    try:
+        await insights_service.stamp_month(
+            db, business=biz, user=current, as_on=datetime.now(timezone.utc).date(),
+        )
+    except Exception as e:
+        log.warning("initial_stamp_failed", business_id=biz.id, err=str(e))
+        await db.rollback()
+        await db.refresh(biz)
 
 
 async def create_business(db: AsyncSession, current: User, payload: BusinessCreate) -> Business:
@@ -46,8 +70,17 @@ async def create_business(db: AsyncSession, current: User, payload: BusinessCrea
         )
         await biz_repo.create_snapshot(db, snap)
 
+        # Sync the household savings the user typed on the setup wizard
+        # into the User row so /me / Home's savings tile stops rendering 0
+        # after login. Only bump the value up — never overwrite a larger
+        # figure captured later on the standalone SavingsLoanScreen.
+        if payload.monthly.savings > current.savings_inr:
+            current.savings_inr = payload.monthly.savings
+            current.updated_by = current.id
+
     await db.commit()
     await db.refresh(biz)
+    await _stamp_first_score(db, biz, current)
     return biz
 
 

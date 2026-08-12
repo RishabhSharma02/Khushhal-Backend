@@ -35,3 +35,34 @@ async def create_snapshot(db: AsyncSession, snapshot: MonthlySnapshot) -> Monthl
     db.add(snapshot)
     await db.flush()
     return snapshot
+
+
+async def latest_snapshot(db: AsyncSession, business_id: int) -> MonthlySnapshot | None:
+    stmt = (
+        select(MonthlySnapshot)
+        .where(
+            MonthlySnapshot.business_id == business_id,
+            MonthlySnapshot.status != RowStatus.deleted,
+        )
+        .order_by(MonthlySnapshot.month.desc(), MonthlySnapshot.id.desc())
+        .limit(1)
+    )
+    return (await db.execute(stmt)).scalar_one_or_none()
+
+
+async def latest_snapshots_map(db: AsyncSession, business_ids: list[int]) -> dict[int, MonthlySnapshot]:
+    """Bulk-fetch the newest snapshot for each of the supplied business ids."""
+    if not business_ids:
+        return {}
+    stmt = (
+        select(MonthlySnapshot)
+        .where(
+            MonthlySnapshot.business_id.in_(business_ids),
+            MonthlySnapshot.status != RowStatus.deleted,
+        )
+        .order_by(MonthlySnapshot.business_id, MonthlySnapshot.month.desc(), MonthlySnapshot.id.desc())
+    )
+    result: dict[int, MonthlySnapshot] = {}
+    for row in (await db.execute(stmt)).scalars().all():
+        result.setdefault(row.business_id, row)
+    return result

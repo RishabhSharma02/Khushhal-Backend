@@ -202,6 +202,19 @@ async def stamp_month(
         if rows:
             await db.execute(pg_insert(PlanAction.__table__).values(rows))
 
+    # Close out earlier editions. `insights_repo.active_alerts` filters on
+    # `resolved_at IS NULL` but not on `as_on`, so without this every month
+    # ever stamped keeps piling warnings next to the current forecast.
+    await db.execute(
+        RiskAlert.__table__.update()
+        .where(
+            RiskAlert.__table__.c.business_id == business.id,
+            RiskAlert.__table__.c.as_on < as_on,
+            RiskAlert.__table__.c.resolved_at.is_(None),
+        )
+        .values(resolved_at=datetime.now(timezone.utc), updated_by=user.id)
+    )
+
     await db.commit()
 
     stored = await insights_repo.health_at(db, business.id, as_on)
