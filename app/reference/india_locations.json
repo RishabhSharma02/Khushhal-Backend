@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "note": "Curated subset for LocationStep dropdowns. Replace with a fuller census-backed dataset when needed.",
+  "states": [
+    {
+      "code": "AN", "name_en": "Andhra Pradesh", "name_hi": "आंध्र प्रदेश",
+      "districts": ["Anantapur", "Chittoor", "East Godavari", "Guntur", "Krishna", "Kurnool", "Nellore", "Prakasam", "Srikakulam", "Visakhapatnam", "West Godavari"]
+    },
+    {
+      "code": "AR", "name_en": "Arunachal Pradesh", "name_hi": "अरुणाचल प्रदेश",
+      "districts": ["East Kameng", "Lohit", "Papum Pare", "Tawang", "West Kameng"]
+    },
+    {
+      "code": "AS", "name_en": "Assam", "name_hi": "असम",
+      "districts": ["Barpeta", "Cachar", "Dibrugarh", "Guwahati", "Jorhat", "Nagaon", "Sivasagar", "Tinsukia"]
+    },
+    {
+      "code": "BR", "name_en": "Bihar", "name_hi": "बिहार",
+      "districts": ["Bhagalpur", "Darbhanga", "Gaya", "Muzaffarpur", "Nalanda", "Patna", "Purnia", "Samastipur"]
+    },
+    {
+      "code": "CG", "name_en": "Chhattisgarh", "name_hi": "छत्तीसगढ़",
+      "districts": ["Bilaspur", "Durg", "Raipur", "Bastar", "Korba", "Rajnandgaon"]
+    },
+    {
+      "code": "GA", "name_en": "Goa", "name_hi": "गोवा",
+      "districts": ["North Goa", "South Goa"]
+    },
+    {
+      "code": "GJ", "name_en": "Gujarat", "name_hi": "गुजरात",
+      "districts": ["Ahmedabad", "Anand", "Bhavnagar", "Kutch", "Rajkot", "Surat", "Vadodara", "Junagadh", "Mehsana"]
+    },
+    {
+      "code": "HR", "name_en": "Haryana", "name_hi": "हरियाणा",
+      "districts": ["Ambala", "Faridabad", "Gurugram", "Hisar", "Karnal", "Panipat", "Rohtak", "Sonipat"]
+    },
+    {
+      "code": "HP", "name_en": "Himachal Pradesh", "name_hi": "हिमाचल प्रदेश",
+      "districts": ["Bilaspur", "Kangra", "Kullu", "Mandi", "Shimla", "Solan", "Una"]
+    },
+    {
+      "code": "JH", "name_en": "Jharkhand", "name_hi": "झारखंड",
+      "districts": ["Bokaro", "Dhanbad", "Hazaribagh", "Jamshedpur", "Ranchi", "Giridih"]
+    },
+    {
+      "code": "KA", "name_en": "Karnataka", "name_hi": "कर्नाटक",
+      "districts": ["Bengaluru", "Belagavi", "Ballari", "Dharwad", "Hassan", "Mysuru", "Mangaluru", "Tumakuru"]
+    },
+    {
+      "code": "KL", "name_en": "Kerala", "name_hi": "केरल",
+      "districts": ["Alappuzha", "Ernakulam", "Kollam", "Kottayam", "Kozhikode", "Malappuram", "Palakkad", "Thiruvananthapuram", "Thrissur"]
+    },
+    {
+      "code": "MP", "name_en": "Madhya Pradesh", "name_hi": "मध्य प्रदेश",
+      "districts": ["Bhopal", "Gwalior", "Indore", "Jabalpur", "Rewa", "Sagar", "Ujjain"]
+    },
+    {
+      "code": "MH", "name_en": "Maharashtra", "name_hi": "महाराष्ट्र",
+      "districts": ["Ahmednagar", "Aurangabad", "Kolhapur", "Mumbai", "Nagpur", "Nashik", "Pune", "Solapur", "Thane"]
+    },
+    {
+      "code": "MN", "name_en": "Manipur", "name_hi": "मणिपुर",
+      "districts": ["Bishnupur", "Imphal East", "Imphal West", "Thoubal"]
+    },
+    {
+      "code": "ML", "name_en": "Meghalaya", "name_hi": "मेघालय",
+      "districts": ["East Khasi Hills", "Ri-Bhoi", "West Garo Hills"]
+    },
+    {
+      "code": "MZ", "name_en": "Mizoram", "name_hi": "मिज़ोरम",
+      "districts": ["Aizawl", "Lunglei", "Champhai"]
+    },
+    {
+      "code": "NL", "name_en": "Nagaland", "name_hi": "नागालैंड",
+      "districts": ["Dimapur", "Kohima", "Mokokchung"]
+    },
+    {
+      "code": "OD", "name_en": "Odisha", "name_hi": "ओडिशा",
+      "districts": ["Balasore", "Bhubaneswar", "Cuttack", "Ganjam", "Puri", "Sambalpur"]
+    },
+    {
+      "code": "PB", "name_en": "Punjab", "name_hi": "पंजाब",
+      "districts": ["Amritsar", "Bathinda", "Jalandhar", "Ludhiana", "Patiala"]
+    },
+    {
+      "code": "RJ", "name_en": "Rajasthan", "name_hi": "राजस्थान",
+      "districts": ["Ajmer", "Alwar", "Bhilwara", "Bikaner", "Jaipur", "Jodhpur", "Kota", "Udaipur"]
+    },
+    {
+      "code": "SK", "name_en": "Sikkim", "name_hi": "सिक्किम",
+      "districts": ["East Sikkim", "West Sikkim", "North Sikkim", "South Sikkim"]
+    },
+    {
+      "code": "TN", "name_en": "Tamil Nadu", "name_hi": "तमिल नाडु",
+      "districts": ["Chennai", "Coimbatore", "Erode", "Kanchipuram", "Madurai", "Salem", "Tiruchirappalli", "Vellore"]
+    },
+    {
+      "code": "TS", "name_en": "Telangana", "name_hi": "तेलंगाना",
+      "districts": ["Hyderabad", "Karimnagar", "Khammam", "Nizamabad", "Warangal"]
+    },
+    {
+      "code": "TR", "name_en": "Tripura", "name_hi": "त्रिपुरा",
+      "districts": ["Agartala", "Dhalai", "North Tripura", "South Tripura"]
+    },
+    {
+      "code": "UP", "name_en": "Uttar Pradesh", "name_hi": "उत्तर प्रदेश",
+      "districts": ["Agra", "Aligarh", "Bareilly", "Ghaziabad", "Kanpur Nagar", "Lucknow", "Meerut", "Prayagraj", "Varanasi"]
+    },
+    {
+      "code": "UK", "name_en": "Uttarakhand", "name_hi": "उत्तराखंड",
+      "districts": ["Almora", "Dehradun", "Haridwar", "Nainital", "Udham Singh Nagar"]
+    },
+    {
+      "code": "WB", "name_en": "West Bengal", "name_hi": "पश्चिम बंगाल",
+      "districts": ["Bardhaman", "Darjeeling", "Hooghly", "Howrah", "Kolkata", "Malda", "Murshidabad", "North 24 Parganas", "South 24 Parganas"]
+    },
+    {
+      "code": "DL", "name_en": "Delhi", "name_hi": "दिल्ली",
+      "districts": ["Central Delhi", "East Delhi", "New Delhi", "North Delhi", "South Delhi", "West Delhi"]
+    }
+  ]
+}

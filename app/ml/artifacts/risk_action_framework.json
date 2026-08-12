@@ -1,0 +1,300 @@
+{
+  "meta": {
+    "title": "Risk Band Classification & Action Framework",
+    "context": "NABARD Hackathon 2026 - AI-Driven Cash Flow Prediction & Risk Flagging System for Rural Micro Enterprises",
+    "note": "Band thresholds are not specified in the problem statement PDF; they are derived from percentile analysis of final_coldstart_training.csv (24,960 rows, 5 sectors, 3 entity types).",
+    "pipeline": "Regression model outputs a 6-month forecasted net cash flow series (per-month). This framework consumes that forecast plus current-state features to assign a band and compose actions.",
+    "sectors": ["dairy", "poultry", "food_processing", "handicrafts", "rural_retail"],
+    "bands": ["green", "amber", "red"]
+  },
+  "band_axes": {
+    "cash_flow_trajectory": {
+      "description": "Primary axis. Derived from the regression model's 6-month forecast series, not a single number, so a temporary dip isn't over-weighted.",
+      "green": "Forecast stays positive across the full horizon; flat or growing trend.",
+      "amber": "Forecast is positive but flat/declining trend, OR dips negative in exactly 1 month of the horizon.",
+      "red": "Forecast is negative in 2 or more months of the horizon, OR cumulative 6-month forecast is negative."
+    },
+    "liquidity_buffer": {
+      "description": "Secondary axis. Current-state ability to absorb a shock, independent of the forecast direction.",
+      "fields_used": ["savings_months", "debt_service_cov", "has_loan"],
+      "green": "savings_months >= 2 AND (has_loan == 0 OR debt_service_cov > 1.5)",
+      "amber": "1 <= savings_months < 2, OR (has_loan == 1 AND 0.75 <= debt_service_cov <= 1.5)",
+      "red": "savings_months < 1, OR (has_loan == 1 AND debt_service_cov < 0.75)",
+      "data_note": "Among enterprises with loans, median debt_service_cov in training data is ~0.96 and the 25th percentile is negative, so the 0.75 cutoff sits in a densely populated, meaningful zone."
+    },
+    "external_stress_overlay": {
+      "description": "Tertiary axis. Does not set the band alone but attaches explanatory context and can escalate a borderline case. Sector-direction sensitivity applies (see driver_overlays).",
+      "fields_used": ["rain_dev_yr", "tot_chg_3m"],
+      "climate_stress_trigger": "rain_dev_yr <= -27 (deficit, ~10th percentile) OR rain_dev_yr >= 31 (excess, ~90th percentile)",
+      "market_stress_trigger": "tot_chg_3m <= -0.10 (moderate, ~25th percentile); severe if <= -0.32 (~10th percentile)"
+    }
+  },
+  "combination_rule": "overall_band = worst(cash_flow_trajectory, liquidity_buffer). Compounding shock rule: if overall_band would be green but 2 or more external_stress_overlay flags are simultaneously active (e.g. climate stress + market stress, or either stress + new-business overlay), downgrade to amber. External stress and new-business flags always attach their overlay action text regardless of whether they change the band.",
+  "sector_band_actions": {
+    "dairy": {
+      "green": {
+        "owner": [
+          "Keep up your current savings routine.",
+          "Consider investing surplus into fodder storage or better vet care.",
+          "Explore a cooperative bulk-selling arrangement for a better milk price."
+        ],
+        "field_officer": [
+          "Confirm the enterprise remains stable at the next visit.",
+          "Discuss growth financing options such as additional cattle or cold-chain access.",
+          "Encourage FPO/cooperative linkage if not already formalised."
+        ]
+      },
+      "amber": {
+        "owner": [
+          "Build up a fodder and cash buffer before the next lean period.",
+          "Track milk yield against your usual pattern.",
+          "Consult a vet early if yield is dropping, rather than waiting."
+        ],
+        "field_officer": [
+          "Schedule a farm visit to check fodder stock and herd health.",
+          "Discuss short-term working capital or a lighter repayment schedule if EMI is tight.",
+          "Re-check status at the next assessment cycle."
+        ]
+      },
+      "red": {
+        "owner": [
+          "Spend only on essential feed and vet care for now.",
+          "Contact your SHG/cooperative for support options.",
+          "Talk to your field officer about emergency credit or a restructured repayment plan before missing a payment."
+        ],
+        "field_officer": [
+          "Make immediate outreach a priority.",
+          "Verify livestock health and feed availability on the ground.",
+          "Recommend an emergency credit line or short moratorium.",
+          "Escalate if cash flow doesn't recover by the next cycle."
+        ]
+      }
+    },
+    "poultry": {
+      "green": {
+        "owner": [
+          "Lock in a bulk feed purchase at today's price if you can.",
+          "Reinvest surplus into flock size or biosecurity upgrades.",
+          "Track feed price trends so you're not caught off guard later."
+        ],
+        "field_officer": [
+          "Flag as a strong candidate for scale-up financing.",
+          "Confirm vaccination and biosecurity compliance now.",
+          "Monitor closely since poultry margins can turn quickly even from a stable position."
+        ]
+      },
+      "amber": {
+        "owner": [
+          "Compare feed suppliers before restocking.",
+          "Avoid growing your flock beyond what current cash flow can comfortably feed.",
+          "Watch for early signs of disease, which can worsen cash flow fast."
+        ],
+        "field_officer": [
+          "Check feed-cost pass-through against current egg/broiler market prices.",
+          "Advise staggered batch sizing to smooth cash flow.",
+          "Watch for disease risk during the visit."
+        ]
+      },
+      "red": {
+        "owner": [
+          "Reduce flock size to what you can sustainably feed.",
+          "Avoid taking on new debt for feed purchases.",
+          "Ask your field officer about bridge financing or feed-input support right away."
+        ],
+        "field_officer": [
+          "Treat this as an urgent visit \u2014 poultry cash flow deteriorates quickly.",
+          "Check for disease outbreak or a feed-price shock as the root cause.",
+          "Connect to emergency working capital.",
+          "Track weekly until stabilised."
+        ]
+      }
+    },
+    "food_processing": {
+      "green": {
+        "owner": [
+          "Negotiate a longer-term raw material contract to lock in input costs.",
+          "Consider adding a value-added product line.",
+          "Keep building your savings buffer during this stable period."
+        ],
+        "field_officer": [
+          "Assess readiness for growth financing such as an equipment upgrade.",
+          "Confirm food-safety/compliance certifications are current.",
+          "Note this as a candidate for formal credit access support."
+        ]
+      },
+      "amber": {
+        "owner": [
+          "Review your pricing since raw material costs are rising faster than sales.",
+          "Renegotiate supplier terms if possible.",
+          "Hold off on building extra inventory until margins stabilise."
+        ],
+        "field_officer": [
+          "Review input-cost pass-through and sourcing options.",
+          "Check whether short-term inventory financing is needed.",
+          "Monitor the demand trend in the enterprise's target market."
+        ]
+      },
+      "red": {
+        "owner": [
+          "Cut non-essential input purchases.",
+          "Renegotiate supplier payment terms if you can.",
+          "Talk to your field officer about a repayment pause or emergency working capital before the next production cycle."
+        ],
+        "field_officer": [
+          "Investigate whether the driver is raw-material cost, demand drop, or debt burden.",
+          "Recommend targeted relief such as an input-cost support link or restructured EMI.",
+          "Flag for close monitoring over the next two cycles."
+        ]
+      }
+    },
+    "handicrafts": {
+      "green": {
+        "owner": [
+          "Build raw material stock ahead of the next peak season.",
+          "Explore new sales channels like exhibitions or online platforms.",
+          "Keep setting aside savings for the off-season."
+        ],
+        "field_officer": [
+          "Encourage market-linkage support such as exhibitions or e-commerce onboarding.",
+          "Confirm savings are being built up for the off-season.",
+          "Use this stable phase to help lock in longer-term buyer relationships."
+        ]
+      },
+      "amber": {
+        "owner": [
+          "Spread sales across more buyers instead of relying on one.",
+          "Hold off on stockpiling raw material until orders firm up.",
+          "Watch your expenses closely until demand stabilises."
+        ],
+        "field_officer": [
+          "Check the order pipeline and buyer concentration risk.",
+          "Explore market-linkage or exhibition support to boost demand.",
+          "Watch the savings buffer ahead of the lean season."
+        ]
+      },
+      "red": {
+        "owner": [
+          "Pause new raw material purchases until you have confirmed orders.",
+          "Talk to your field officer about short-term support for essential expenses.",
+          "Avoid new debt until demand picks back up."
+        ],
+        "field_officer": [
+          "Identify whether this is a demand shock or a seasonal lean period.",
+          "Connect to market-linkage programs or emergency credit.",
+          "Avoid recommending new production financing until demand recovers."
+        ]
+      }
+    },
+    "rural_retail": {
+      "green": {
+        "owner": [
+          "Build a buffer for the next lean period.",
+          "Shift inventory mix toward higher-margin items.",
+          "Review supplier terms while cash flow is strong."
+        ],
+        "field_officer": [
+          "Confirm inventory turnover is healthy.",
+          "Discuss modest working capital for inventory expansion if requested.",
+          "Note as a stable enterprise for the next review cycle."
+        ]
+      },
+      "amber": {
+        "owner": [
+          "Review which items are moving slowly and cut back restocking on those.",
+          "Avoid new supplier credit purchases until cash flow firms up.",
+          "Track expenses closely this month."
+        ],
+        "field_officer": [
+          "Review expense ratio and inventory mix.",
+          "Check for local demand disruption such as new competition or nearby price changes.",
+          "Recommend inventory rationalisation before extending new credit."
+        ]
+      },
+      "red": {
+        "owner": [
+          "Stock only fast-moving essential items for now.",
+          "Delay any supplier credit purchases.",
+          "Contact your field officer about restructuring an existing loan or EMI."
+        ],
+        "field_officer": [
+          "Conduct an on-site check \u2014 local demand shocks often drive rural retail risk.",
+          "Verify the root cause before recommending credit.",
+          "Prioritise essential working capital only where repayment capacity is realistic."
+        ]
+      }
+    }
+  },
+  "driver_overlays": {
+    "liquidity_debt_stress": {
+      "trigger_fields": ["savings_months", "debt_service_cov"],
+      "trigger_condition": "savings_months < 1 OR debt_service_cov < 0.75",
+      "owner_action": [
+        "Set aside a fixed share of incoming cash toward rebuilding your buffer before any new spending.",
+        "Talk to your lender early about restructuring if you have an existing loan.",
+        "Avoid taking on new debt until your buffer improves."
+      ],
+      "field_officer_action": [
+        "Assess eligibility for repayment restructuring or a moratorium.",
+        "Consider linking to a lower-cost credit product.",
+        "Flag for close monitoring before default risk rises."
+      ]
+    },
+    "climate_stress_deficit": {
+      "trigger_fields": ["rain_dev_yr"],
+      "trigger_condition": "rain_dev_yr <= -27",
+      "sector_sensitivity": "Input-cost sensitive sectors (dairy, poultry, food_processing) are affected via feed/raw material prices; demand-sensitive sectors (rural_retail, handicrafts) are affected via local purchasing power.",
+      "owner_action": [
+        "Plan input purchases early rather than buying at peak prices later.",
+        "Check for local advisories on drought-resistant practices.",
+        "Build a small reserve for potential feed/input price increases."
+      ],
+      "field_officer_action": [
+        "Cross-check with local agri/market advisory for input price movement.",
+        "Consider flagging for climate-risk-linked support such as weather-indexed insurance or a seasonal advisory.",
+        "Note the deviation in the enterprise's risk profile."
+      ]
+    },
+    "climate_stress_excess": {
+      "trigger_fields": ["rain_dev_yr"],
+      "trigger_condition": "rain_dev_yr >= 31",
+      "owner_action": [
+        "Check storage and drainage to protect stock.",
+        "Avoid overstocking perishable inputs until conditions settle.",
+        "Monitor for transport or access disruptions."
+      ],
+      "field_officer_action": [
+        "Check for reports of localised disruption such as transport, spoilage, or market access issues.",
+        "Factor this into the next visit plan.",
+        "Watch for compounding effects with other risk factors."
+      ]
+    },
+    "market_stress": {
+      "trigger_fields": ["tot_chg_3m"],
+      "trigger_condition": "tot_chg_3m <= -0.10 (moderate); severe if <= -0.32",
+      "owner_action": [
+        "Review your pricing given rising input costs.",
+        "Explore group/bulk purchasing with other enterprises.",
+        "Delay non-essential purchases until terms of trade improve."
+      ],
+      "field_officer_action": [
+        "Explore collective procurement linkages such as FPO/SHG bulk buying.",
+        "Escalate to the district agri-market cell if the trend is sector-wide.",
+        "Monitor terms of trade at the next assessment."
+      ]
+    },
+    "new_business": {
+      "trigger_fields": ["is_new_business", "years_in_operation"],
+      "trigger_condition": "is_new_business == 1 OR years_in_operation <= 1",
+      "owner_action": [
+        "Build a habit of setting aside savings from every income cycle, even small amounts.",
+        "Track your cash flow closely since patterns are still forming.",
+        "Ask your field officer for guidance before taking on debt."
+      ],
+      "field_officer_action": [
+        "Apply a closer monitoring cadence for this enterprise.",
+        "Consider mentorship/handholding support rather than immediate credit-based interventions.",
+        "Revisit the risk band more frequently until a stable pattern emerges."
+      ]
+    }
+  }
+}

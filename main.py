@@ -1,13 +1,3 @@
-from fastapi import FastAPI
+from app.main import app
 
-app = FastAPI(title="Khushhal Backend", version="0.1.0")
-
-
-@app.get("/")
-def root():
-    return {"message": "Khushhal Backend is running"}
-
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+__all__ = ["app"]
