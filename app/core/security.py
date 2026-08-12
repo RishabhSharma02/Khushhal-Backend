@@ -71,6 +71,35 @@ async def _verify_id_token(token: str) -> FirebaseIdentity:
     return FirebaseIdentity(uid=uid, phone_e164=phone)
 
 
+def _unverified_decode(token: str) -> FirebaseIdentity:
+    """Base64-decode the JWT payload without signature verification. Used
+    ONLY as a dev fallback when the server has no Firebase Admin credentials
+    configured — see DEV_TOOLS_ENABLED handling below. Never call this in
+    production.
+    """
+    import base64
+    import json
+
+    parts = token.split(".")
+    if len(parts) < 2:
+        raise UnauthorizedError("Malformed bearer token")
+    padded = parts[1] + "=" * (-len(parts[1]) % 4)
+    try:
+        payload = json.loads(base64.urlsafe_b64decode(padded))
+    except Exception as e:
+        raise UnauthorizedError("Cannot decode token payload") from e
+
+    uid = payload.get("user_id") or payload.get("sub") or payload.get("uid")
+    phone = payload.get("phone_number") or payload.get("phone")
+    if not uid:
+        raise UnauthorizedError("Token missing uid")
+    if not phone:
+        # Some Firebase test flows omit phone_number — synthesize a stable
+        # dev placeholder so the User row can be created.
+        phone = f"+91{abs(hash(uid)) % 10_000_000_000:010d}"
+    return FirebaseIdentity(uid=uid, phone_e164=phone)
+
+
 async def _identity_from_request(
     request: Request,
     settings: Settings,
@@ -80,9 +109,15 @@ async def _identity_from_request(
     auth = request.headers.get("Authorization", "")
     if auth.lower().startswith("bearer "):
         token = auth.split(" ", 1)[1].strip()
-        if not _init_firebase(settings):
-            raise UnauthorizedError("Firebase not configured on server")
-        return await _verify_id_token(token)
+        if _init_firebase(settings):
+            return await _verify_id_token(token)
+        # No Admin creds — in dev mode, trust-decode the JWT so the app can
+        # be exercised end-to-end without a service account. Loud warning so
+        # nobody flips DEV_TOOLS_ENABLED in prod by accident.
+        if settings.dev_tools_enabled:
+            log.warning("dev_trust_decoding_bearer_no_admin_creds")
+            return _unverified_decode(token)
+        raise UnauthorizedError("Firebase not configured on server")
 
     if settings.dev_tools_enabled and x_debug_firebase_uid:
         phone = x_debug_phone or f"+91{int(hash(x_debug_firebase_uid)) % 10_000_000_000:010d}"
