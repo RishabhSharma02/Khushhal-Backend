@@ -7,7 +7,11 @@ T = TypeVar("T")
 
 
 class ORMModel(BaseModel):
-    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        use_enum_values=True,
+        protected_namespaces=(),
+    )
 
 
 class PageEnvelope(BaseModel, Generic[T]):

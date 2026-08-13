@@ -1,8 +1,17 @@
 from functools import lru_cache
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _async_database_url(url: str) -> str:
+    """Railway/Heroku style URLs are postgresql://; SQLAlchemy async needs asyncpg."""
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url.removeprefix("postgres://")
+    if url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
+        url = "postgresql+asyncpg://" + url.removeprefix("postgresql://")
+    return url
 
 
 class Settings(BaseSettings):
@@ -22,6 +31,13 @@ class Settings(BaseSettings):
     firebase_credentials_json: str = ""
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return _async_database_url(value)
+        return value
 
     @computed_field  # type: ignore[prop-decorator]
     @property
