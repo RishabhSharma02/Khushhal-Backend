@@ -6,3 +6,9 @@ venv/
 .env
 .DS_Store
 .railway/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+# Local ML training data — never bundle the 280 MB CSV into the backend image
+app/ml/artifacts/*.csv
+
