@@ -16,6 +16,9 @@ class AlertKind(str, enum.Enum):
     climate_excess = "climate_excess"
     market_stress = "market_stress"
     new_business = "new_business"
+    # Sector × band playbook always attached on stamp so green/amber/red
+    # all expose owner + field-officer actions via GET /alerts.
+    band_guidance = "band_guidance"
 
 
 class AlertSeverity(str, enum.Enum):
