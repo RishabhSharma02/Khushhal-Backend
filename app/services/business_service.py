@@ -70,13 +70,14 @@ async def create_business(db: AsyncSession, current: User, payload: BusinessCrea
         )
         await biz_repo.create_snapshot(db, snap)
 
-        # Sync the household savings the user typed on the setup wizard
-        # into the User row so /me / Home's savings tile stops rendering 0
-        # after login. Only bump the value up — never overwrite a larger
-        # figure captured later on the standalone SavingsLoanScreen.
-        if payload.monthly.savings > current.savings_inr:
-            current.savings_inr = payload.monthly.savings
-            current.updated_by = current.id
+        # The savings figure typed on the setup wizard belongs to this
+        # business, so it seeds the business row rather than the household
+        # one. The wizard only collects a monthly EMI, not an outstanding
+        # balance — surface that on Home's loan tile as an opening value
+        # so it isn't zero after onboarding; the owner can replace it with
+        # the true balance from the savings & loan screen.
+        biz.savings_inr = payload.monthly.savings
+        biz.loan_inr = payload.monthly.loan_emi
 
     await db.commit()
     await db.refresh(biz)

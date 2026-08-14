@@ -35,6 +35,8 @@ class BusinessUpdate(BaseModel):
     staff_count: int | None = Field(default=None, ge=1)
     is_new_business: bool | None = None
     years_in_operation: int | None = Field(default=None, ge=0)
+    savings_inr: int | None = Field(default=None, ge=0)
+    loan_inr: int | None = Field(default=None, ge=0)
 
 
 class MonthlySnapshotRead(ORMModel):
@@ -57,6 +59,8 @@ class BusinessRead(ORMModel):
     staff_count: int
     is_new_business: bool
     years_in_operation: int
+    savings_inr: int
+    loan_inr: int
     # The most recent monthly baseline captured for this business — usually
     # the setup-wizard row. Present so the client can seed Home's money
     # tiles from the onboarding numbers before any live ledger entries land.
