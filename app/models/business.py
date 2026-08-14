@@ -53,6 +53,12 @@ class Business(Base, AuditMixin, SoftDeleteMixin):
     is_new_business: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     years_in_operation: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
 
+    # Savings held and loan outstanding for this business. Per business rather
+    # than per user: an owner running two ventures keeps their money apart, and
+    # the score has to reflect the business being scored.
+    savings_inr: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    loan_inr: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+
     __table_args__ = (
         CheckConstraint("staff_count >= 1", name="ck_businesses_staff_count_min"),
         Index("ix_businesses_user_active", "user_id", postgresql_where="status <> 'deleted'"),
