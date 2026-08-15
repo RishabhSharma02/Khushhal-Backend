@@ -61,6 +61,9 @@ class BusinessRead(ORMModel):
     years_in_operation: int
     savings_inr: int
     loan_inr: int
+    # Field-officer link. Null on most rows; when set, clients fetch the
+    # officer's contact card from GET /officers/{id}.
+    officer_id: int | None = None
     # The most recent monthly baseline captured for this business — usually
     # the setup-wizard row. Present so the client can seed Home's money
     # tiles from the onboarding numbers before any live ledger entries land.

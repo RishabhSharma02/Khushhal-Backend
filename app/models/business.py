@@ -42,6 +42,13 @@ class Business(Base, AuditMixin, SoftDeleteMixin):
         BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
+    # Field officer assigned to this business. Nullable — most businesses are
+    # unattended. When set, the app fetches the officer's contact card from
+    # GET /officers/{id} and shows it on Home.
+    officer_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("officers.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     segment: Mapped[BusinessSegment] = mapped_column(segment_enum, nullable=False)
     sector: Mapped[BusinessSector] = mapped_column(sector_enum, nullable=False)
