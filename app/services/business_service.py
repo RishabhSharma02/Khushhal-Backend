@@ -101,6 +101,9 @@ async def create_business(db: AsyncSession, current: User, payload: BusinessCrea
     # lightgbm native lib fails to load) — assignment is cheap/deterministic
     # and shouldn't be at the mercy of that.
     await _auto_assign_officer(biz, current)
+    # Auto-assign commits in its own session; reload so the 201 body
+    # includes businesses.officer_id.
+    await db.refresh(biz)
     await _stamp_first_score(db, biz, current)
     return biz
 

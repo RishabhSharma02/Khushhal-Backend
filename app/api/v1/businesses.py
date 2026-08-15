@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user
 from app.db.session import get_db
+from app.models.business import Business
+from app.models.monthly_snapshot import MonthlySnapshot
 from app.models.user import User
 from app.repositories import businesses as biz_repo
 from app.schemas.business import (
@@ -15,11 +17,28 @@ from app.schemas.business import (
 from app.services import business_service
 
 
-def _attach_snapshot(biz, snap) -> BusinessRead:
+def _to_read(
+    biz: Business,
+    snap: MonthlySnapshot | None,
+    assigned_officer_id: int | None = None,
+) -> BusinessRead:
     read = BusinessRead.model_validate(biz)
+    updates: dict[str, object] = {}
     if snap is not None:
-        read = read.model_copy(update={"latest_snapshot": MonthlySnapshotRead.model_validate(snap)})
+        updates["latest_snapshot"] = MonthlySnapshotRead.model_validate(snap)
+    if read.officer_id is None and assigned_officer_id is not None:
+        updates["officer_id"] = assigned_officer_id
+    if updates:
+        return read.model_copy(update=updates)
     return read
+
+
+async def _reads_for(db: AsyncSession, items: list[Business]) -> list[BusinessRead]:
+    ids = [b.id for b in items]
+    snaps = await biz_repo.latest_snapshots_map(db, ids)
+    officers = await biz_repo.assigned_officer_ids_map(db, ids)
+    return [_to_read(b, snaps.get(b.id), officers.get(b.id)) for b in items]
+
 
 router = APIRouter(tags=["businesses"], prefix="/businesses")
 
@@ -31,8 +50,7 @@ async def create_business(
     current: User = Depends(get_current_user),
 ) -> BusinessRead:
     biz = await business_service.create_business(db, current, payload)
-    snap = await biz_repo.latest_snapshot(db, biz.id)
-    return _attach_snapshot(biz, snap)
+    return (await _reads_for(db, [biz]))[0]
 
 
 @router.get("", response_model=list[BusinessRead])
@@ -41,8 +59,7 @@ async def list_businesses(
     current: User = Depends(get_current_user),
 ) -> list[BusinessRead]:
     items = await business_service.list_businesses(db, current)
-    snaps = await biz_repo.latest_snapshots_map(db, [b.id for b in items])
-    return [_attach_snapshot(b, snaps.get(b.id)) for b in items]
+    return await _reads_for(db, items)
 
 
 @router.get("/{business_id}", response_model=BusinessRead)
@@ -52,8 +69,7 @@ async def get_business(
     current: User = Depends(get_current_user),
 ) -> BusinessRead:
     biz = await business_service.require_owned(db, business_id, current)
-    snap = await biz_repo.latest_snapshot(db, biz.id)
-    return _attach_snapshot(biz, snap)
+    return (await _reads_for(db, [biz]))[0]
 
 
 @router.patch("/{business_id}", response_model=BusinessRead)
@@ -64,8 +80,7 @@ async def patch_business(
     current: User = Depends(get_current_user),
 ) -> BusinessRead:
     biz = await business_service.update_business(db, business_id, current, payload)
-    snap = await biz_repo.latest_snapshot(db, biz.id)
-    return _attach_snapshot(biz, snap)
+    return (await _reads_for(db, [biz]))[0]
 
 
 @router.delete("/{business_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)

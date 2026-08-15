@@ -76,6 +76,7 @@ async def _seed(args: argparse.Namespace) -> None:
 
         business = Business(
             user_id=owner.id,
+            officer_id=officer.id,
             name="Shanti Dairy",
             segment=BusinessSegment.shg,
             sector=BusinessSector.dairy,

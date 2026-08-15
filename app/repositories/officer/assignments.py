@@ -2,6 +2,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import RowStatus
+from app.models.business import Business
 from app.models.officer import Officer
 from app.models.officer_assignment import OfficerEnterpriseAssignment
 
@@ -16,6 +17,11 @@ async def create(
     # self-referential convention as officer self-registration.
     assignment.created_by = officer_id
     assignment.updated_by = officer_id
+    # Consumer GET /businesses reads businesses.officer_id, not this table.
+    # Keep the denormalized FK in sync so Home can show the officer card.
+    biz = await db.get(Business, business_id)
+    if biz is not None and biz.officer_id is None:
+        biz.officer_id = officer_id
     await db.flush()
     return assignment
 

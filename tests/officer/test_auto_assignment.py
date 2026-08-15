@@ -89,6 +89,28 @@ async def _assigned_officer_id(business_id: int) -> int | None:
         await conn.close()
 
 
+async def _business_officer_id(business_id: int) -> int | None:
+    conn = await asyncpg.connect(_raw_dsn())
+    try:
+        return await conn.fetchval(
+            "SELECT officer_id FROM businesses WHERE id=$1",
+            business_id,
+        )
+    finally:
+        await conn.close()
+
+
+async def _clear_business_officer_id(business_id: int) -> None:
+    conn = await asyncpg.connect(_raw_dsn())
+    try:
+        await conn.execute(
+            "UPDATE businesses SET officer_id=NULL WHERE id=$1",
+            business_id,
+        )
+    finally:
+        await conn.close()
+
+
 async def _cleanup(*, officer_ids: list[int], firebase_uid: str, decoy_business_ids: list[int] | None = None) -> None:
     conn = await asyncpg.connect(_raw_dsn())
     try:
@@ -135,11 +157,18 @@ def test_new_business_is_auto_assigned_to_officer_in_same_state(client, state_ma
 
         response = client.post("/api/v1/businesses", headers=headers, json=BUSINESS_PAYLOAD)
         assert response.status_code == 201
-        business_id = response.json()["id"]
+        body = response.json()
+        business_id = body["id"]
+        assert body["officer_id"] == matching_officer_id
 
         assigned = _run(_assigned_officer_id(business_id))
         assert assigned == matching_officer_id
         assert assigned != other_officer_id
+        assert _run(_business_officer_id(business_id)) == matching_officer_id
+
+        listed = client.get("/api/v1/businesses", headers=headers)
+        assert listed.status_code == 200
+        assert listed.json()[0]["officer_id"] == matching_officer_id
     finally:
         _run(
             _cleanup(
@@ -200,3 +229,39 @@ def test_new_business_still_gets_assigned_when_no_officer_matches_the_state(clie
         assert _run(_assigned_officer_id(business_id)) is not None
     finally:
         _run(_cleanup(officer_ids=[officer_id], firebase_uid="auto-owner-2"))
+
+
+def test_list_businesses_fills_officer_id_from_assignment_when_column_is_null(
+    client, state_matched_officers
+):
+    """Production rows were assigned via officer_enterprise_assignments
+    without populating businesses.officer_id. GET /businesses must still
+    return the assigned officer so Home can load the contact card.
+    """
+    matching_officer_id, other_officer_id = state_matched_officers
+    headers = {"X-Debug-Firebase-Uid": "auto-owner-3"}
+    try:
+        me = client.patch("/api/v1/me", headers=headers, json={"state": "Auto State"})
+        assert me.status_code == 200
+
+        created = client.post("/api/v1/businesses", headers=headers, json=BUSINESS_PAYLOAD)
+        assert created.status_code == 201
+        business_id = created.json()["id"]
+        _run(_clear_business_officer_id(business_id))
+        assert _run(_business_officer_id(business_id)) is None
+        assert _run(_assigned_officer_id(business_id)) == matching_officer_id
+
+        listed = client.get("/api/v1/businesses", headers=headers)
+        assert listed.status_code == 200
+        assert listed.json()[0]["officer_id"] == matching_officer_id
+
+        detail = client.get(f"/api/v1/businesses/{business_id}", headers=headers)
+        assert detail.status_code == 200
+        assert detail.json()["officer_id"] == matching_officer_id
+    finally:
+        _run(
+            _cleanup(
+                officer_ids=[matching_officer_id, other_officer_id],
+                firebase_uid="auto-owner-3",
+            )
+        )

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.base import RowStatus
 from app.models.business import Business
 from app.models.monthly_snapshot import MonthlySnapshot
+from app.models.officer_assignment import OfficerEnterpriseAssignment
 
 
 async def list_for_user(db: AsyncSession, user_id: int) -> list[Business]:
@@ -65,4 +66,32 @@ async def latest_snapshots_map(db: AsyncSession, business_ids: list[int]) -> dic
     result: dict[int, MonthlySnapshot] = {}
     for row in (await db.execute(stmt)).scalars().all():
         result.setdefault(row.business_id, row)
+    return result
+
+
+async def assigned_officer_ids_map(
+    db: AsyncSession, business_ids: list[int]
+) -> dict[int, int]:
+    """Earliest active assignment per business.
+
+    `businesses.officer_id` is the consumer-facing denormalized copy, but
+    rows assigned before that column was populated (or via the assignment
+    table alone) still need GET /businesses to return an officer_id.
+    """
+    if not business_ids:
+        return {}
+    stmt = (
+        select(
+            OfficerEnterpriseAssignment.business_id,
+            OfficerEnterpriseAssignment.officer_id,
+        )
+        .where(
+            OfficerEnterpriseAssignment.business_id.in_(business_ids),
+            OfficerEnterpriseAssignment.status != RowStatus.deleted,
+        )
+        .order_by(OfficerEnterpriseAssignment.id.asc())
+    )
+    result: dict[int, int] = {}
+    for business_id, officer_id in (await db.execute(stmt)).all():
+        result.setdefault(business_id, officer_id)
     return result
