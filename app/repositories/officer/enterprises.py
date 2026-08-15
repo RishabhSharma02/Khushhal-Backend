@@ -56,6 +56,22 @@ async def entry_streak_days(db: AsyncSession, business_id: int, since: datetime)
     return int((await db.execute(stmt)).scalar_one())
 
 
+async def distinct_village_count(db: AsyncSession, business_ids: list[int]) -> int:
+    """Distinct owner villages among the given businesses — the Profile
+    screen's "My coverage" tile. Villages aren't on `businesses` itself,
+    only on the owning `users` row.
+    """
+    if not business_ids:
+        return 0
+    stmt = (
+        select(func.count(func.distinct(User.village)))
+        .select_from(Business)
+        .join(User, User.id == Business.user_id)
+        .where(Business.id.in_(business_ids), User.village.isnot(None))
+    )
+    return int((await db.execute(stmt)).scalar_one())
+
+
 async def list_recent_snapshots(db: AsyncSession, business_id: int, limit: int = 6) -> list[MonthlySnapshot]:
     """Oldest-first, most recent [limit] months — for the cash-flow chart's
     actuals half.

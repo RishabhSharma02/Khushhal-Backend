@@ -30,6 +30,18 @@ class OfficerSessionResponse(BaseModel):
     officer: OfficerRead
 
 
+class CoverageRead(BaseModel):
+    """The Profile screen's "My coverage" tile — aggregated server-side
+    across the officer's assigned enterprises, not part of OfficerRead
+    since it's only needed when the profile screen is actually open.
+    """
+
+    enterprise_count: int
+    village_count: int
+    visits_this_month: int
+    flags_resolved_last_30_days: int
+
+
 class OfficerRegister(BaseModel):
     employee_id: str = Field(min_length=1, max_length=40)
     full_name: str = Field(min_length=1, max_length=120)
