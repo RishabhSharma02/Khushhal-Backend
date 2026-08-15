@@ -63,3 +63,75 @@ def test_action_steps_not_found_for_unassigned_business(client, seeded_officer):
 def test_action_steps_unauthorized_without_token(client, seeded_enterprise):
     response = client.get(_base(seeded_enterprise))
     assert response.status_code == 401
+
+
+def test_send_action_plan_publishes_field_officer_plan_actions(client, seeded_enterprise):
+    import asyncio
+
+    import asyncpg
+
+    from tests.officer.conftest import _raw_dsn
+
+    client.post(
+        _base(seeded_enterprise), headers=HEADERS,
+        json={"title": "Talk to owner", "detail": "about savings", "impact": "high"},
+    )
+
+    response = client.post(f"{_base(seeded_enterprise)}/send", headers=HEADERS)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["steps_sent"] == 1
+    alert_id = body["alert_id"]
+
+    async def _fetch():
+        conn = await asyncpg.connect(_raw_dsn())
+        try:
+            return await conn.fetch(
+                "SELECT role, label_en, ordinal FROM plan_actions WHERE alert_id = $1", alert_id
+            )
+        finally:
+            await conn.close()
+
+    rows = asyncio.run(_fetch())
+    assert len(rows) == 1
+    assert rows[0]["role"] == "field_officer"
+    assert rows[0]["label_en"] == "Talk to owner: about savings"
+
+
+def test_send_action_plan_replaces_previous_send(client, seeded_enterprise):
+    client.post(
+        _base(seeded_enterprise), headers=HEADERS,
+        json={"title": "First plan", "detail": "", "impact": "low"},
+    )
+    first = client.post(f"{_base(seeded_enterprise)}/send", headers=HEADERS).json()
+    assert first["steps_sent"] == 1
+
+    client.post(
+        _base(seeded_enterprise), headers=HEADERS,
+        json={"title": "Second step", "detail": "", "impact": "low"},
+    )
+    second = client.post(f"{_base(seeded_enterprise)}/send", headers=HEADERS).json()
+    assert second["steps_sent"] == 2  # replaces, not appends onto the first send
+
+
+def test_send_action_plan_conflict_when_no_open_alert(client, seeded_enterprise):
+    import asyncio
+
+    import asyncpg
+
+    from tests.officer.conftest import _raw_dsn
+
+    async def _resolve():
+        conn = await asyncpg.connect(_raw_dsn())
+        try:
+            await conn.execute(
+                "UPDATE risk_alerts SET resolved_at = now() WHERE business_id = $1",
+                seeded_enterprise,
+            )
+        finally:
+            await conn.close()
+
+    asyncio.run(_resolve())
+
+    response = client.post(f"{_base(seeded_enterprise)}/send", headers=HEADERS)
+    assert response.status_code == 409

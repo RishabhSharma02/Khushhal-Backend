@@ -43,9 +43,11 @@ async def get_dashboard(db: AsyncSession, officer_id: int) -> DashboardRead:
 
     # No missed-EMI signal exists anywhere upstream yet (see
     # enterprise_service.py's emi_on_time note) — 100%/no-change is the
-    # honest reading of "every known EMI is on time" until one does.
-    emis_on_time_percent = 100
-    emis_on_time_delta = 0
+    # honest reading of "every known EMI is on time" when there's at least
+    # one business to hold that claim about. With zero, there's nothing to
+    # report at all, so it's None (N/A) rather than a vacuous 100%.
+    emis_on_time_percent = 100 if business_ids else None
+    emis_on_time_delta = 0 if business_ids else None
 
     today = date.today()
     last_30_start = today - timedelta(days=30)

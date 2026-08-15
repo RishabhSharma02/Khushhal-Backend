@@ -26,3 +26,8 @@ class ActionStepUpdate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     detail: str = Field(default="", max_length=400)
     impact: ActionStepImpact
+
+
+class ActionPlanSentRead(BaseModel):
+    alert_id: int
+    steps_sent: int
