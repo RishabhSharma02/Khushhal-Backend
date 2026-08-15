@@ -12,6 +12,7 @@ from app.models.user import User
 from app.repositories import businesses as biz_repo
 from app.schemas.business import BusinessCreate, BusinessUpdate
 from app.services import insights_service
+from app.services.officer import assignment_service
 
 log = get_logger(__name__)
 
@@ -39,6 +40,19 @@ async def _stamp_first_score(db: AsyncSession, biz: Business, current: User) -> 
         log.warning("initial_stamp_failed", business_id=biz.id, err=str(e))
         await db.rollback()
         await db.refresh(biz)
+
+
+async def _auto_assign_officer(biz: Business, current: User) -> None:
+    """Assigns a field officer to a brand-new business. Same fire-and-forget
+    safety as `_stamp_first_score` — a hiccup here (e.g. no officers
+    provisioned yet) must never block onboarding. Runs in its own session
+    (see assignment_service.auto_assign_officer), so unlike
+    `_stamp_first_score` there's no request session state to recover here.
+    """
+    try:
+        await assignment_service.auto_assign_officer(biz.id, current.state)
+    except Exception as e:
+        log.warning("auto_assign_failed", business_id=biz.id, err=str(e))
 
 
 async def create_business(db: AsyncSession, current: User, payload: BusinessCreate) -> Business:
@@ -81,6 +95,12 @@ async def create_business(db: AsyncSession, current: User, payload: BusinessCrea
 
     await db.commit()
     await db.refresh(biz)
+    # Runs before _stamp_first_score deliberately: the ML stamp's own
+    # try/except can leave the request's async context in a state where
+    # nothing else can safely await on it afterward (seen locally when the
+    # lightgbm native lib fails to load) — assignment is cheap/deterministic
+    # and shouldn't be at the mercy of that.
+    await _auto_assign_officer(biz, current)
     await _stamp_first_score(db, biz, current)
     return biz
 

@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.officer import router as officer_router
 from app.api.v1 import router as api_v1_router
 from app.core.config import get_settings
 from app.core.exceptions import install_exception_handlers
@@ -61,6 +62,7 @@ def create_app() -> FastAPI:
     install_rate_limiting(app)
     install_exception_handlers(app)
     app.include_router(api_v1_router)
+    app.include_router(officer_router)
 
     @app.get("/")
     async def root() -> dict:
