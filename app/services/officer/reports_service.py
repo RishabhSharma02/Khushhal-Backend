@@ -131,8 +131,12 @@ async def get_reports(db: AsyncSession, officer_id: int) -> ReportSummaryRead:
         flags_resolved=flags_resolved,
         flags_opened=flags_opened,
         average_resolution_days=average_resolution_days,
-        emis_on_time_percent=100,
-        emis_on_time_delta=0,
+        # No missed-EMI signal exists upstream yet — 100%/no-change is the
+        # honest reading of "every known EMI is on time" when there's at
+        # least one business to hold that claim about; with zero, there's
+        # nothing to report, so it's None (N/A).
+        emis_on_time_percent=100 if business_ids else None,
+        emis_on_time_delta=0 if business_ids else None,
         visits_done=visits_done,
         risk_led_visits=risk_led_visits,
         sector_scores=sector_rows,

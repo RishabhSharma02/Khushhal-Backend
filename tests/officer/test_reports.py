@@ -26,3 +26,18 @@ def test_reports_month_label_is_current_month(client, seeded_enterprise):
 def test_reports_unauthorized_without_token(client):
     response = client.get("/api/officer/v1/reports")
     assert response.status_code == 401
+
+
+def test_reports_emis_on_time_is_none_with_zero_enterprises(client, seeded_officer):
+    response = client.get("/api/officer/v1/reports", headers=HEADERS)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["emis_on_time_percent"] is None
+    assert body["emis_on_time_delta"] is None
+
+
+def test_reports_emis_on_time_is_100_with_an_enterprise(client, seeded_enterprise):
+    response = client.get("/api/officer/v1/reports", headers=HEADERS)
+    body = response.json()
+    assert body["emis_on_time_percent"] == 100
+    assert body["emis_on_time_delta"] == 0

@@ -4,7 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.officer_security import get_current_officer
 from app.db.session import get_db
 from app.models.officer import Officer
-from app.schemas.officer.action_steps import ActionStepCreate, ActionStepRead, ActionStepUpdate
+from app.schemas.officer.action_steps import (
+    ActionPlanSentRead,
+    ActionStepCreate,
+    ActionStepRead,
+    ActionStepUpdate,
+)
 from app.services.officer import action_step_service
 
 router = APIRouter(prefix="/enterprises/{business_id}/action-steps", tags=["officer-action-steps"])
@@ -41,6 +46,16 @@ async def update_action_step(
 ) -> ActionStepRead:
     step = await action_step_service.update_action_step(db, current, business_id, step_id, payload)
     return ActionStepRead.model_validate(step)
+
+
+@router.post("/send", response_model=ActionPlanSentRead)
+async def send_action_plan(
+    business_id: int,
+    db: AsyncSession = Depends(get_db),
+    current: Officer = Depends(get_current_officer),
+) -> ActionPlanSentRead:
+    alert_id, sent = await action_step_service.send_action_plan(db, current, business_id)
+    return ActionPlanSentRead(alert_id=alert_id, steps_sent=len(sent))
 
 
 @router.delete("/{step_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
