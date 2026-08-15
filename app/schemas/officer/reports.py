@@ -30,8 +30,10 @@ class ReportSummaryRead(BaseModel):
     flags_resolved: int
     flags_opened: int
     average_resolution_days: int
-    emis_on_time_percent: int
-    emis_on_time_delta: int
+    # None (N/A) when the officer has zero assigned enterprises — there's
+    # nothing to report an EMI-timeliness rate about.
+    emis_on_time_percent: int | None
+    emis_on_time_delta: int | None
     visits_done: int
     risk_led_visits: int
     sector_scores: list[SectorScoreRead]
