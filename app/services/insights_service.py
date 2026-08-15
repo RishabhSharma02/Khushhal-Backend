@@ -41,6 +41,8 @@ _DRIVER_TO_KIND = {
     "climate_stress_excess": AlertKind.climate_excess,
     "market_stress": AlertKind.market_stress,
     "new_business": AlertKind.new_business,
+    "band_guidance": AlertKind.band_guidance,
+    "savings_low": AlertKind.savings_low,
 }
 
 
@@ -146,16 +148,20 @@ async def stamp_month(
         await db.execute(fstmt)
 
     # ---- RiskAlerts + PlanActions ----
-    # Build one alert per triggered overlay; a red band with no overlays
-    # still becomes a `savings_low` alert so the AlertsScreen shows
-    # something actionable.
+    # Always attach the sector × band playbook so green/amber/red all expose
+    # actionables via GET /alerts — not only when a driver overlay fires.
+    # Overlay-driven alerts (liquidity, climate, market, new-business) are
+    # appended on top with their own kinds.
     overlays = list(result.overlays)
-    if not overlays and result.band == "red":
-        overlays.append(ml_pipeline.Overlay(
-            driver="savings_low",
-            owner_action=list(result.owner_actions),
-            field_officer_action=list(result.field_officer_actions),
-        ))
+    if result.owner_actions or result.field_officer_actions:
+        overlays.insert(
+            0,
+            ml_pipeline.Overlay(
+                driver="band_guidance",
+                owner_action=list(result.owner_actions),
+                field_officer_action=list(result.field_officer_actions),
+            ),
+        )
 
     for overlay in overlays:
         kind = _DRIVER_TO_KIND.get(overlay.driver, AlertKind.savings_low)

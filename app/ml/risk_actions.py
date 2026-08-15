@@ -25,7 +25,10 @@ def get_actionables(sector, band, ctx):
              tot_chg_3m_min, is_new_business, years_in_operation
     Returns a structured dict of owner + field-officer actionables.
     """
-    sba = FRAMEWORK["sector_band_actions"].get(sector, {}).get(band, {})
+    # Unknown sectors (e.g. BusinessSector.other) fall back to rural_retail
+    # so the alerts API still returns a playbook instead of empty actions.
+    sector_key = sector if sector in FRAMEWORK["sector_band_actions"] else "rural_retail"
+    sba = FRAMEWORK["sector_band_actions"].get(sector_key, {}).get(band, {})
     result = {
         "sector": sector,
         "band": band,

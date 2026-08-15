@@ -81,8 +81,14 @@ def build_feature_context(
     monthly_income = float(snapshot.money_in) if snapshot else None
     monthly_expenditure = float(snapshot.money_out) if snapshot else None
     emi_amount = float(snapshot.loan_emi) if snapshot else 0.0
-    savings_amount = float(user.savings_inr) if user.savings_inr else (float(snapshot.savings) if snapshot else 0.0)
-    loan_outstanding = float(user.loan_inr)
+    # Savings and loan are held per business. The snapshot is only a fallback
+    # for rows created before the business columns existed.
+    savings_amount = (
+        float(business.savings_inr)
+        if business.savings_inr
+        else (float(snapshot.savings) if snapshot else 0.0)
+    )
+    loan_outstanding = float(business.loan_inr)
 
     # Recent ledger — if we have data, prefer the observed monthly averages
     # over the setup snapshot.
