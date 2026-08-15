@@ -44,6 +44,12 @@ class CashFlowMonthRead(BaseModel):
     label: str
     money_in_inr: int
     money_out_inr: int
+    # The forecast's actual predicted quantity (Forecast.cf_pred) — only set
+    # when `is_forecast` is true. `money_in_inr`/`money_out_inr` for
+    # forecast months are a synthetic split (out held at the recent
+    # average, in derived from it) that isn't a real prediction on its
+    # own; `net_inr` is the genuine model output.
+    net_inr: int | None = None
     is_forecast: bool
     is_flagged: bool
 

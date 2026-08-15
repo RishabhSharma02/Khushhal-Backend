@@ -193,6 +193,7 @@ async def get_cash_flow(db: AsyncSession, officer_id: int, business_id: int) -> 
                 label=_month_label(label_date),
                 money_in_inr=money_in,
                 money_out_inr=money_out,
+                net_inr=int(f.cf_pred),
                 is_forecast=True,
                 is_flagged=f.is_risk_month,
             )
